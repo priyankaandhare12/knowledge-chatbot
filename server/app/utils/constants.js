@@ -1,0 +1,6 @@
+export const CHAT_LIMITS = {
+    MAX_MESSAGE_LENGTH: 3000,
+    MAX_HISTORY_ITEMS: 100,
+    TIMEOUT: 1200000, //30 Seconds
+    MAX_RETRIES: 3,
+};

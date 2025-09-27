@@ -1,0 +1,198 @@
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { config } from '../../config/environment.js';
+import auth0Service from '../../app/services/auth0.service.js';
+import { generateJwtToken, AuthenticationError, DomainNotAllowedError } from '../../app/middleware/auth.middleware.js';
+
+const router = express.Router();
+
+// GET /auth/login - Initiate login flow
+router.get('/login', (req, res) => {
+    try {
+        const state = uuidv4();
+        const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/callback`;
+
+        // Store state in session for verification
+        req.session.authState = state;
+        req.session.originalUrl = req.query.returnTo || config.frontend.url;
+
+        const loginUrl = auth0Service.generateLoginUrl(state, redirectUri);
+
+        res.json({
+            success: true,
+            loginUrl: loginUrl,
+            message: 'Redirect to this URL to login with Google',
+        });
+    } catch (error) {
+        console.error('Login initiation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to initiate login',
+        });
+    }
+});
+
+// GET /auth/callback - Handle Auth0 callback
+router.get('/callback', async (req, res) => {
+    try {
+        const { code, state, error, error_description } = req.query;
+
+        // Handle Auth0 errors
+        if (error) {
+            console.error('Auth0 callback error:', error, error_description);
+            return res.redirect(`${config.frontend.url}/login?error=auth_failed&message=${encodeURIComponent(error_description || error)}`);
+        }
+
+        // Verify state parameter
+        if (!state || state !== req.session.authState) {
+            console.error('Invalid state parameter');
+            return res.redirect(`${config.frontend.url}/login?error=invalid_state`);
+        }
+
+        if (!code) {
+            console.error('No authorization code received');
+            return res.redirect(`${config.frontend.url}/login?error=no_code`);
+        }
+
+        // Complete authentication
+        const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/callback`;
+        const authResult = await auth0Service.completeAuthentication(code, redirectUri);
+
+        // Generate JWT token
+        const jwtToken = generateJwtToken(authResult.user);
+
+        // Store user in session
+        req.session.user = authResult.user;
+        req.session.tokens = {
+            jwt: jwtToken,
+            auth0AccessToken: authResult.tokens.accessToken,
+            auth0RefreshToken: authResult.tokens.refreshToken,
+        };
+
+        // Clean up auth state
+        delete req.session.authState;
+
+        // Get return URL
+        const returnTo = req.session.originalUrl || config.frontend.url;
+        delete req.session.originalUrl;
+
+        // Set JWT as HTTP-only cookie
+        res.cookie('auth_token', jwtToken, {
+            httpOnly: true,
+            secure: config.session.secure,
+            sameSite: 'lax',
+            maxAge: config.session.maxAge,
+            domain: config.session.cookieDomain,
+        });
+
+        // Redirect to frontend with success
+        res.redirect(`${returnTo}?auth=success`);
+    } catch (error) {
+        console.error('Callback processing error:', error);
+
+        if (error.message.includes('Access denied for domain')) {
+            return res.redirect(`${config.frontend.url}/login?error=domain_not_allowed&message=${encodeURIComponent(error.message)}`);
+        }
+
+        res.redirect(`${config.frontend.url}/login?error=callback_failed&message=${encodeURIComponent(error.message)}`);
+    }
+});
+
+// POST /auth/logout - Logout user
+router.post('/logout', (req, res) => {
+    try {
+        const returnTo = req.body.returnTo || config.frontend.url;
+
+        // Clear session
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Session destroy error:', err);
+            }
+        });
+
+        // Clear JWT cookie
+        res.clearCookie('auth_token', {
+            domain: config.session.cookieDomain,
+        });
+
+        // Generate Auth0 logout URL
+        const logoutUrl = auth0Service.generateLogoutUrl(returnTo);
+
+        res.json({
+            success: true,
+            logoutUrl: logoutUrl,
+            message: 'Logged out successfully',
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to logout',
+        });
+    }
+});
+
+// GET /auth/user - Get current user info
+router.get('/user', (req, res) => {
+    try {
+        // Check session first
+        if (req.session && req.session.user) {
+            return res.json({
+                success: true,
+                user: req.session.user,
+                authenticated: true,
+            });
+        }
+
+        // Check JWT cookie
+        const token = req.cookies.auth_token;
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, config.jwt.secret);
+                return res.json({
+                    success: true,
+                    user: {
+                        id: decoded.userId,
+                        email: decoded.email,
+                        name: decoded.name,
+                        emailVerified: decoded.emailVerified,
+                    },
+                    authenticated: true,
+                });
+            } catch (jwtError) {
+                // Invalid JWT, clear cookie
+                res.clearCookie('auth_token');
+            }
+        }
+
+        res.json({
+            success: true,
+            user: null,
+            authenticated: false,
+        });
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get user information',
+        });
+    }
+});
+
+// GET /auth/status - Check authentication status
+router.get('/status', (req, res) => {
+    const isAuthenticated = !!(req.session?.user || req.cookies.auth_token);
+
+    res.json({
+        success: true,
+        authenticated: isAuthenticated,
+        domainRestrictions: {
+            enabled: config.domainRestrictions.enabled,
+            allowedDomains: config.domainRestrictions.allowedDomains,
+            allowAllGmail: config.domainRestrictions.allowAllGmail,
+        },
+    });
+});
+
+export default router;

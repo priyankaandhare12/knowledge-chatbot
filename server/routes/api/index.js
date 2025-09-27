@@ -1,10 +1,10 @@
 import express from 'express';
 import { chat } from '../../app/controllers/chat-controller.js';
-import { ssoLogin } from '../../app/controllers/auth-controller.js';
-import { auth } from '../../app/middleware/auth.js';
+import { requireAuth } from '../../app/middleware/auth.middleware.js';
 import { asyncHandler } from '../../app/middleware/validation.js';
 import { chatValidation } from '../../app/validators/chat-validation.js';
 import { config } from '../../config/environment.js';
+import authRoutes from './auth.js';
 
 const router = express.Router();
 
@@ -24,10 +24,10 @@ router.get(
 );
 
 // Authentication routes (public)
-router.post('/auth/sso', ssoLogin);
+router.use('/auth', authRoutes);
 
 // Protected routes - require authentication
-router.use(auth);
+router.use(requireAuth);
 
 // ChatBot Route 
 router.post('/chat', chatValidation, chat);

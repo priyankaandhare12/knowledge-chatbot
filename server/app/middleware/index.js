@@ -8,6 +8,9 @@ import { config } from '../../config/environment.js';
 import { httpLogger } from '../utils/logger.js';
 
 export const setupMiddleware = (app) => {
+    // Trust proxy for Vercel/serverless deployments
+    app.set('trust proxy', 1);
+
     app.use(helmet());
 
     app.use(
@@ -49,6 +52,17 @@ export const setupMiddleware = (app) => {
         },
         standardHeaders: true,
         legacyHeaders: false,
+        // Custom key generator for serverless/proxy environments
+        keyGenerator: (req) => {
+            // Use X-Forwarded-For header when available (Vercel provides this)
+            const forwarded = req.headers['x-forwarded-for'];
+            if (forwarded) {
+                // Take the first IP from the list
+                return forwarded.split(',')[0].trim();
+            }
+            // Fallback to connection remote address
+            return req.connection.remoteAddress || req.ip;
+        },
     });
 
     app.use('/api/', limiter);

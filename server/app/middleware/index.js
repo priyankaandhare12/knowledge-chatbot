@@ -52,6 +52,11 @@ export const setupMiddleware = (app) => {
         },
         standardHeaders: true,
         legacyHeaders: false,
+        // Skip validation for serverless environments
+        validate: {
+            xForwardedForHeader: false,
+            forwardedHeader: false,
+        },
         // Custom key generator for serverless/proxy environments
         keyGenerator: (req) => {
             // Use X-Forwarded-For header when available (Vercel provides this)

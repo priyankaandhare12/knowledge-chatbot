@@ -3,7 +3,7 @@ import { chat } from '../../app/controllers/chat-controller.js';
 import { requireAuth } from '../../app/middleware/auth.middleware.js';
 import { ssoLogin } from '../../app/controllers/auth-controller.js';
 import { uploadFile } from '../../app/controllers/upload-controller.js';
-import { listFiles, deleteFile } from '../../app/controllers/file-controller.js';
+import { listFiles, getFileById, deleteFile } from '../../app/controllers/file-controller.js';
 import { auth } from '../../app/middleware/auth.js';
 import upload from '../../app/middleware/upload.js';
 import { asyncHandler } from '../../app/middleware/validation.js';
@@ -38,8 +38,9 @@ router.use(requireAuth);
 router.post('/chat', chatValidation, chat);
 
 // File Management Routes
-router.post('/upload', upload.single('file'), uploadFile);
+router.post('/upload', uploadFile);
 router.get('/files', listFiles);
+router.get('/files/:fileId', getFileById);
 router.delete('/files/:fileId', deleteFile);
 
 export default router;

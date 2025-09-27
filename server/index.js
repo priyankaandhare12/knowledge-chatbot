@@ -1,5 +1,4 @@
 import { config, validateEnvironment } from './config/environment.js';
-import './instrumentation.js'; // Must be imported before other modules to auto-trace them
 import express from 'express';
 import { setupMiddleware } from './app/middleware/index.js';
 import { errorHandler, notFoundHandler } from './app/middleware/error-handler.js';

@@ -5,18 +5,28 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 import { config } from '../../config/environment.js';
 import { getPrompt, Prompts } from '../prompts/index.js';
-import { webSearchTool } from '../tools/web-search/WebSearchTool.js';
-import { CHAT_LIMITS } from '../utils/constants.js';
+import { tools } from '../tools/registry.js';
+import logger from '../utils/logger.js';
 
 // Lazy initialization - these will be created when first needed
 let llm = null;
 let agent = null;
-const tools = [webSearchTool];
 const toolNode = new ToolNode(tools);
 
+// Define state schema with fileId support
 const stateSchema = Annotation.Root({
     messages: Annotation({
         reducer: messagesStateReducer,
+    }),
+    userQuery: Annotation({
+        default: () => '',
+    }),
+    fileId: Annotation({
+        default: () => null,
+    }),
+    conversationID: Annotation({
+        reducer: (state, update) => update ?? state,
+        default: () => '',
     }),
 });
 
@@ -27,12 +37,10 @@ function initializeLLM() {
             model: 'gpt-4',
             temperature: 0.1,
             apiKey: config.openai.apiKey,
-            maxTokens: CHAT_LIMITS.MAX_MESSAGE_LENGTH,
+            maxTokens: 1000,
             configuration: {
                 projectId: config.openai.projectId,
             },
-            timeout: CHAT_LIMITS.TIMEOUT,
-            maxRetries: CHAT_LIMITS.MAX_RETRIES,
         }).bindTools(tools);
     }
     return llm;
@@ -82,14 +90,23 @@ function initializeAgent() {
  * @param {Object} state - The state object containing user query and metadata
  * @param {string} state.userQuery - The user's question
  * @param {string} state.conversationID - Conversation identifier
+ * @param {string} [state.fileId] - Optional file ID for document queries
  * @returns {Promise<Object>} The agent's response
  */
 export async function invokeAgent(state) {
     const agentInstance = initializeAgent();
 
+    // Create the initial message with fileId context if provided
+    const userMessage = state.fileId
+        ? `[Using document: ${state.fileId}] ${state.userQuery}`
+        : state.userQuery;
+
     const result = await agentInstance.invoke(
         {
-            messages: [new HumanMessage(state.userQuery)],
+            messages: [new HumanMessage(userMessage)],
+            userQuery: state.userQuery,
+            fileId: state.fileId,
+            conversationID: state.conversationID,
         },
         {
             configurable: {
@@ -97,7 +114,6 @@ export async function invokeAgent(state) {
                 projectId: config.openai.projectId,
             },
             recursionLimit: 5,
-            runName: 'Universal Knowledge Agent',
         },
     );
 

@@ -1,71 +1,134 @@
 import { asyncHandler } from '../middleware/validation.js';
-import { processDocument } from '../services/file-processor.js';
+import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
+import { processPDFDocument } from '../services/file-processor.js';
 import logger from '../utils/logger.js';
 
-/**
- * Handle file upload and processing
- */
-export const uploadFile = asyncHandler(async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({
-            success: false,
-            error: 'No file uploaded',
+// Configure multer to store in memory
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { 
+        fileSize: 5 * 1024 * 1024  // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        logger.debug({
+            message: 'Received file',
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
         });
+
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed'));
+        }
     }
+}).single('file');
 
-    try {
-        // Check file type
-        if (!req.file.mimetype.includes('pdf')) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid file type',
-                message: 'Only PDF files are supported',
+export const uploadFile = asyncHandler(async (req, res) => {
+    upload(req, res, async (err) => {
+        try {
+            logger.info('Starting file upload process');
+
+            if (err instanceof multer.MulterError) {
+                logger.error({
+                    message: 'Multer error',
+                    error: err.message,
+                    code: err.code
+                });
+                return res.status(400).json({
+                    success: false,
+                    error: 'File upload error',
+                    message: err.code === 'LIMIT_FILE_SIZE' 
+                        ? 'File size cannot exceed 5MB'
+                        : err.message
+                });
+            }
+            
+            if (err) {
+                logger.error({
+                    message: 'Upload error',
+                    error: err.message
+                });
+                return res.status(400).json({
+                    success: false,
+                    error: 'Upload failed',
+                    message: err.message
+                });
+            }
+
+            if (!req.file) {
+                logger.error('No file in request');
+                return res.status(400).json({
+                    success: false,
+                    error: 'No file uploaded',
+                    message: 'Please select a PDF file to upload'
+                });
+            }
+
+            // Log file details
+            logger.info({
+                message: 'File received',
+                fileName: req.file.originalname,
+                fileSize: req.file.size,
+                mimeType: req.file.mimetype
             });
-        }
 
-        // Check file size (5MB limit)
-        if (req.file.size > 5 * 1024 * 1024) {
-            return res.status(400).json({
-                success: false,
-                error: 'File too large',
-                message: 'Maximum file size is 5MB',
+            // Generate fileId
+            const fileId = uuidv4();
+
+            logger.info({
+                message: 'Processing file',
+                fileId,
+                fileName: req.file.originalname
             });
-        }
 
-        // Generate a unique file ID
-        const fileId = uuidv4();
-        
-        logger.info(`Processing file: ${req.file.originalname} (${req.file.size} bytes)`);
-
-        // Process the document
-        await processDocument(req.file.buffer, {
-            fileId,
-            fileName: req.file.originalname,
-            mimeType: req.file.mimetype,
-            userId: req.user?.id || 'anonymous',
-            uploadedAt: new Date().toISOString(),
-            fileSize: req.file.size,
-        });
-
-        logger.info(`File processed successfully: ${fileId}`);
-
-        res.json({
-            success: true,
-            data: {
+            // Process the document using buffer
+            const result = await processPDFDocument(req.file.buffer, {
                 fileId,
                 fileName: req.file.originalname,
-                message: 'File processed successfully',
+                mimeType: req.file.mimetype,
+                fileSize: req.file.size,
+                userId: req.user?.id || 'anonymous',
                 uploadedAt: new Date().toISOString(),
-            },
-        });
-    } catch (error) {
-        logger.error(error, `Error processing file: ${req.file.originalname}`);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to process file',
-            message: error.message || 'An unexpected error occurred while processing the file',
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        });
-    }
+            });
+
+            logger.info({
+                message: 'File processed successfully',
+                fileId,
+                fileName: req.file.originalname,
+                chunks: result.chunks
+            });
+
+            // Return success response
+            res.json({
+                success: true,
+                data: {
+                    fileId,
+                    fileName: req.file.originalname,
+                    pages: result.pages,
+                    chunks: result.chunks,
+                    uploadedAt: new Date().toISOString(),
+                }
+            });
+
+        } catch (error) {
+            logger.error({
+                message: 'Error in upload process',
+                error: error.message,
+                stack: error.stack,
+                fileName: req.file?.originalname,
+                fileSize: req.file?.size,
+                mimeType: req.file?.mimetype
+            });
+
+            res.status(500).json({
+                success: false,
+                error: 'Failed to process PDF',
+                message: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
+        }
+    });
 });

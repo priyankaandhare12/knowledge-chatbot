@@ -85,16 +85,26 @@ router.get('/callback', async (req, res) => {
         const returnTo = statePayload.returnTo || config.frontend.url;
 
         // Set JWT as HTTP-only cookie
-        res.cookie('auth_token', jwtToken, {
+        const cookieOptions = {
             httpOnly: true,
             secure: config.session.secure,
-            sameSite: 'lax',
+            sameSite: 'none', // Changed for cross-domain
             maxAge: config.session.maxAge,
-            domain: config.session.cookieDomain,
-        });
+            // Don't set domain for cross-domain cookies
+        };
 
-        // Redirect to frontend with success
-        res.redirect(`${returnTo}?auth=success`);
+        console.log('=== COOKIE SETTING DEBUG ===');
+        console.log('User authenticated:', authResult.user.email);
+        console.log('JWT token length:', jwtToken.length);
+        console.log('Cookie options:', cookieOptions);
+        console.log('Return URL:', returnTo);
+        console.log('============================');
+
+        res.cookie('auth_token', jwtToken, cookieOptions);
+
+        // Also include token in URL as backup for cross-domain issues
+        const separator = returnTo.includes('?') ? '&' : '?';
+        res.redirect(`${returnTo}${separator}auth=success&token=${jwtToken}`);
     } catch (error) {
         console.error('Callback processing error:', error);
 
@@ -143,8 +153,18 @@ router.post('/logout', (req, res) => {
 // GET /auth/user - Get current user info
 router.get('/user', (req, res) => {
     try {
+        console.log('=== /auth/user DEBUG ===');
+        console.log('Session exists:', !!req.session);
+        console.log('Session user:', req.session?.user);
+        console.log('All cookies:', req.cookies);
+        console.log('Auth token cookie:', req.cookies.auth_token);
+        console.log('Request origin:', req.get('origin'));
+        console.log('Cookie domain config:', config.session.cookieDomain);
+        console.log('=======================');
+
         // Check session first
         if (req.session && req.session.user) {
+            console.log('✅ Using session authentication');
             return res.json({
                 success: true,
                 user: req.session.user,
@@ -155,8 +175,10 @@ router.get('/user', (req, res) => {
         // Check JWT cookie
         const token = req.cookies.auth_token;
         if (token) {
+            console.log('✅ Found auth_token, verifying JWT...');
             try {
                 const decoded = jwt.verify(token, config.jwt.secret);
+                console.log('✅ JWT verified for user:', decoded.email);
                 return res.json({
                     success: true,
                     user: {
@@ -168,11 +190,15 @@ router.get('/user', (req, res) => {
                     authenticated: true,
                 });
             } catch (jwtError) {
+                console.log('❌ JWT verification failed:', jwtError.message);
                 // Invalid JWT, clear cookie
                 res.clearCookie('auth_token');
             }
+        } else {
+            console.log('❌ No auth_token cookie found');
         }
 
+        console.log('❌ No authentication found, returning null user');
         res.json({
             success: true,
             user: null,

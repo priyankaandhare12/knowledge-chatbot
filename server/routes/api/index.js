@@ -1,6 +1,11 @@
 import express from 'express';
 import { chat } from '../../app/controllers/chat-controller.js';
 import { requireAuth } from '../../app/middleware/auth.middleware.js';
+import { ssoLogin } from '../../app/controllers/auth-controller.js';
+import { uploadFile } from '../../app/controllers/upload-controller.js';
+import { listFiles, deleteFile } from '../../app/controllers/file-controller.js';
+import { auth } from '../../app/middleware/auth.js';
+import upload from '../../app/middleware/upload.js';
 import { asyncHandler } from '../../app/middleware/validation.js';
 import { chatValidation } from '../../app/validators/chat-validation.js';
 import { config } from '../../config/environment.js';
@@ -29,7 +34,12 @@ router.use('/auth', authRoutes);
 // Protected routes - require authentication
 router.use(requireAuth);
 
-// ChatBot Route 
+// ChatBot Routes
 router.post('/chat', chatValidation, chat);
+
+// File Management Routes
+router.post('/upload', upload.single('file'), uploadFile);
+router.get('/files', listFiles);
+router.delete('/files/:fileId', deleteFile);
 
 export default router;

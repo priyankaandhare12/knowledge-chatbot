@@ -53,9 +53,34 @@ export const config = {
         apiKey: process.env.TAVILY_API_KEY,
     },
 
+    weather: {
+        apiKey: process.env.WEATHER_API_KEY,
+        baseUrl: 'https://api.openweathermap.org/data/2.5',
+        units: 'metric', // Use Celsius
+    },
+
+    pinecone: {
+        apiKey: process.env.PINECONE_API_KEY,
+        indexName: process.env.PINECONE_INDEX || 'knowledge-base',
+    },
+
     jwt: {
         secret: process.env.JWT_SECRET || 'fallback-jwt-secret-change-in-production',
         expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    },
+
+    upload: {
+        maxFileSize: process.env.MAX_FILE_SIZE || 5 * 1024 * 1024, // 5MB default
+        allowedTypes: ['application/pdf', 'text/plain'],
+    },
+
+    // SSO config will be added here later
+    sso: {
+        // Example fields that will be needed:
+        // provider: process.env.SSO_PROVIDER,
+        // clientId: process.env.SSO_CLIENT_ID,
+        // clientSecret: process.env.SSO_CLIENT_SECRET,
+        // callbackUrl: process.env.SSO_CALLBACK_URL,
     },
 };
 

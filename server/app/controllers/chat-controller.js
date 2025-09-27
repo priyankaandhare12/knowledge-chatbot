@@ -1,13 +1,13 @@
 import { asyncHandler } from '../middleware/validation.js';
 import { v4 as uuidv4 } from 'uuid';
-import { compiledWorkflow } from '../workflows/workflow.js';
+import { invokeAgent } from '../agents/universal-agent.js';
 import logger from '../utils/logger.js';
 
 /**
- * Main chat endpoint that uses the universal knowledge workflow
+ * Main chat endpoint that handles both web search and document queries
  */
 export const chat = asyncHandler(async (req, res) => {
-    const { message, conversationId } = req.body;
+    const { message, conversationId, fileId } = req.body;
 
     // Validate required fields
     if (!message) {
@@ -21,15 +21,19 @@ export const chat = asyncHandler(async (req, res) => {
         // Generate conversation ID if not provided
         const chatConversationId = conversationId || uuidv4();
 
-        // Invoke the universal workflow
-        const result = await compiledWorkflow.invoke(
-            {
-                userQuery: message,
-                conversationID: chatConversationId,
-            },
+        // Log the query type
+        logger.info(
+            fileId 
+                ? `Processing document query for fileId: ${fileId}` 
+                : 'Processing web search query'
         );
 
-        logger.debug(result, 'Workflow result:');
+        // Invoke the universal agent
+        const result = await invokeAgent({
+            userQuery: message,
+            conversationID: chatConversationId,
+            fileId,
+        });
 
         // Format the response
         const response = {
@@ -37,8 +41,9 @@ export const chat = asyncHandler(async (req, res) => {
             data: {
                 message: result.finalResponse,
                 metadata: {
-                    conversationId: chatConversationId,
+                    conversationId: result.conversationId,
                     timestamp: new Date().toISOString(),
+                    fileId: fileId || null,
                 },
                 user: {
                     id: req.user?.id || 'anonymous',
@@ -58,7 +63,7 @@ export const chat = asyncHandler(async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to generate response',
-            message: 'An error occurred while processing your request',
+            message: error.message,
         });
     }
 });

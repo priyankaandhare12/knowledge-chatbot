@@ -1,43 +1,71 @@
 import { Annotation, END, messagesStateReducer, START, StateGraph } from '@langchain/langgraph';
 import logger from '../utils/logger.js';
-import { invokeUniversalAgent } from '../agents/index.js';
+import { routerNode } from './nodes/router-node.js';
+import { weatherNode } from './nodes/weather-node.js';
+import { documentNode } from './nodes/document-node.js';
 
-// Simple state schema - only what we need
+// Define state schema
 const WorkflowState = Annotation.Root({
-    userQuery: Annotation({
-        default: () => '',
-    }),
     messages: Annotation({
         reducer: messagesStateReducer,
     }),
-    finalResponse: Annotation({
-        reducer: (state, update) => update ?? state,
+    userQuery: Annotation({
         default: () => '',
+    }),
+    fileId: Annotation({
+        default: () => null,
     }),
     conversationID: Annotation({
         reducer: (state, update) => update ?? state,
         default: () => '',
     }),
+    selectedNode: Annotation({
+        reducer: (state, update) => update ?? state,
+        default: () => '',
+    }),
+    routingMetadata: Annotation({
+        reducer: (state, update) => update ?? state,
+        default: () => ({}),
+    }),
 });
 
-// Universal knowledge node - handles web search
-const universalNode = async (state) => {
-    logger.info(`Executing universal knowledge node with query: "${state.userQuery}"`);
+// Conditional routing function
+function routeToNode(state) {
+    const selectedNode = state.selectedNode;
+    logger.info(`Routing to node: ${selectedNode}`);
 
-    const result = await invokeUniversalAgent(state);
+    switch (selectedNode) {
+        case 'weatherNode':
+            return 'weatherNode';
+        case 'documentNode':
+            return 'documentNode';
+        case 'none':
+            // Return unsupported query message
+            return {
+                messages: [{
+                    type: 'system',
+                    content: state.routingMetadata.message,
+                }],
+            };
+        default:
+            throw new Error(`Unknown node type: ${selectedNode}`);
+    }
+}
 
-    return {
-        messages: result.messages,
-        finalResponse: result.finalResponse,
-        conversationID: result.conversationId,
-    };
-};
-
-// Create the workflow graph - simple linear flow
+// Create the workflow graph
 const graph = new StateGraph(WorkflowState)
-    .addNode('universal', universalNode)
-    .addEdge(START, 'universal')
-    .addEdge('universal', END);
+    .addNode('router', routerNode)
+    .addNode('weatherNode', weatherNode)
+    .addNode('documentNode', documentNode);
+
+// Define the flow
+graph
+    .addEdge(START, 'router')
+    .addConditionalEdges('router', routeToNode, {
+        weatherNode: END,
+        documentNode: END,
+        none: END,
+    });
 
 // Compile the workflow
 const compiledWorkflow = graph.compile();

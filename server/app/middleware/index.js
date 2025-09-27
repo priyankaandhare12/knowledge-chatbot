@@ -10,9 +10,7 @@ import { httpLogger } from '../utils/logger.js';
 export const setupMiddleware = (app) => {
     // Trust proxy for Vercel/serverless deployments
     app.set('trust proxy', 1);
-
     app.use(helmet());
-
     app.use(
         cors({
             origin: config.frontend.url,
@@ -23,7 +21,6 @@ export const setupMiddleware = (app) => {
     );
 
     app.use(httpLogger);
-
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use(cookieParser());

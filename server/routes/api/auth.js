@@ -10,12 +10,17 @@ const router = express.Router();
 // GET /auth/login - Initiate login flow
 router.get('/login', (req, res) => {
     try {
-        const state = uuidv4();
         const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/callback`;
+        const returnTo = req.query.returnTo || config.frontend.url;
 
-        // Store state in session for verification
-        req.session.authState = state;
-        req.session.originalUrl = req.query.returnTo || config.frontend.url;
+        // Create stateless state parameter with JWT (serverless-friendly)
+        const statePayload = {
+            nonce: uuidv4(),
+            returnTo: returnTo,
+            timestamp: Date.now(),
+        };
+
+        const state = jwt.sign(statePayload, config.jwt.secret, { expiresIn: '10m' });
 
         const loginUrl = auth0Service.generateLoginUrl(state, redirectUri);
 
@@ -44,10 +49,16 @@ router.get('/callback', async (req, res) => {
             return res.redirect(`${config.frontend.url}/login?error=auth_failed&message=${encodeURIComponent(error_description || error)}`);
         }
 
-        // Verify state parameter
-        if (!state || state !== req.session.authState) {
-            console.error('Invalid state parameter');
-            return res.redirect(`${config.frontend.url}/login?error=invalid_state`);
+        // Verify JWT-based state parameter (serverless-friendly)
+        let statePayload;
+        try {
+            statePayload = jwt.verify(state, config.jwt.secret);
+            console.log('State verified successfully:', statePayload.nonce);
+        } catch (stateError) {
+            console.error('Invalid or expired state parameter:', stateError.message);
+            return res.redirect(
+                `${config.frontend.url}/login?error=invalid_state&message=${encodeURIComponent('Authentication state expired, please try again')}`,
+            );
         }
 
         if (!code) {
@@ -70,12 +81,8 @@ router.get('/callback', async (req, res) => {
             auth0RefreshToken: authResult.tokens.refreshToken,
         };
 
-        // Clean up auth state
-        delete req.session.authState;
-
-        // Get return URL
-        const returnTo = req.session.originalUrl || config.frontend.url;
-        delete req.session.originalUrl;
+        // Get return URL from state payload (no session cleanup needed)
+        const returnTo = statePayload.returnTo || config.frontend.url;
 
         // Set JWT as HTTP-only cookie
         res.cookie('auth_token', jwtToken, {

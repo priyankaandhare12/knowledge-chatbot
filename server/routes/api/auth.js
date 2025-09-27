@@ -172,8 +172,14 @@ router.get('/user', (req, res) => {
             });
         }
 
-        // Check JWT cookie
-        const token = req.cookies.auth_token;
+        // Check JWT cookie or Authorization header
+        let token = req.cookies.auth_token;
+        
+        // Also check Authorization header as fallback
+        if (!token && req.headers.authorization) {
+            token = req.headers.authorization.replace('Bearer ', '');
+        }
+        
         if (token) {
             console.log('✅ Found auth_token, verifying JWT...');
             try {

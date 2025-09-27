@@ -8,6 +8,10 @@ export const config = {
 
     frontend: {
         url: process.env.FRONTEND_URL || 'http://localhost:3000',
+        // For Vercel deployments, allow multiple origins
+        allowedOrigins: process.env.ALLOWED_ORIGINS
+            ? process.env.ALLOWED_ORIGINS.split(',').map((url) => url.trim())
+            : [process.env.FRONTEND_URL || 'http://localhost:3000'],
     },
 
     auth0: {
@@ -21,8 +25,8 @@ export const config = {
 
     session: {
         secret: process.env.SESSION_SECRET || 'change-this-in-production',
-        cookieDomain: process.env.SESSION_COOKIE_DOMAIN || 'localhost',
-        secure: process.env.SESSION_SECURE === 'true',
+        cookieDomain: process.env.SESSION_COOKIE_DOMAIN || (process.env.NODE_ENV === 'production' ? '.vercel.app' : 'localhost'),
+        secure: process.env.SESSION_SECURE === 'true' || process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
 

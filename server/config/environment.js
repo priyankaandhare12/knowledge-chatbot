@@ -25,7 +25,7 @@ export const config = {
 
     session: {
         secret: process.env.SESSION_SECRET || 'change-this-in-production',
-        cookieDomain: process.env.SESSION_COOKIE_DOMAIN || (process.env.NODE_ENV === 'production' ? '.vercel.app' : 'localhost'),
+        cookieDomain: process.env.SESSION_COOKIE_DOMAIN || undefined, // No default domain for production
         secure: process.env.SESSION_SECURE === 'true' || process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },

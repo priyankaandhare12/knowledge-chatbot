@@ -14,7 +14,9 @@
         "logs:debug": "npx pm2 logs knowledge-chatbot-debug",
         "test": "node --experimental-vm-modules node_modules/.bin/jest",
         "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "check-port": "lsof -Pi :3001 -sTCP:LISTEN || echo '✅ Port 3001 is available'",
+        "kill-port": "lsof -ti:3001 | xargs kill -9 2>/dev/null || echo 'No process found on port 3001'"
     },
     "keywords": [
         "langchain",
@@ -31,6 +33,9 @@
         "@langchain/langgraph": "^0.4.5",
         "@langchain/openai": "^0.6.7",
         "@langchain/tavily": "^0.1.5",
+        "@langfuse/otel": "^4.2.0",
+        "@opentelemetry/sdk-node": "^0.205.0",
+        "auth0": "^4.9.0",
         "axios": "^1.12.2",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
@@ -38,6 +43,7 @@
         "express": "^5.1.0",
         "express-basic-auth": "^1.2.1",
         "express-rate-limit": "^8.0.1",
+        "express-session": "^1.18.0",
         "express-validator": "^7.2.1",
         "helmet": "^8.1.0",
         "http-errors": "^2.0.0",

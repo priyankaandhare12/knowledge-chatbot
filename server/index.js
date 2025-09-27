@@ -48,7 +48,7 @@ app.use(routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
     console.info('================================================');
     console.info('🚀 Knowledge Chat AI Server Started!');
     console.info('================================================');
@@ -56,4 +56,15 @@ app.listen(config.port, () => {
     console.info(`🌍 Environment: ${config.nodeEnv}`);
     console.info(`⏰ Started at: ${new Date().toISOString()}`);
     console.info('================================================');
+});
+
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        logger.error(`❌ Port ${config.port} is already in use. Please stop the other process or use a different port.`);
+        logger.error(`💡 Try: lsof -ti:${config.port} | xargs kill -9`);
+        process.exit(1);
+    } else {
+        logger.error({ err: error }, 'Server error');
+        process.exit(1);
+    }
 });

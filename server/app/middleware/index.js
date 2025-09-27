@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { config } from '../../config/environment.js';
@@ -23,6 +24,21 @@ export const setupMiddleware = (app) => {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use(cookieParser());
+
+    // Session middleware for Auth0 state management
+    app.use(
+        session({
+            secret: config.session.secret,
+            resave: false,
+            saveUninitialized: false,
+            cookie: {
+                secure: config.session.secure,
+                httpOnly: true,
+                maxAge: config.session.maxAge,
+                domain: config.session.cookieDomain,
+            },
+        }),
+    );
 
     const limiter = rateLimit({
         windowMs: config.rateLimit.windowMs,

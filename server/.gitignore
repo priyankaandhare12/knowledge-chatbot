@@ -1,4 +1,56 @@
-node_modules
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files - NEVER COMMIT THESE
 .env
+.env.local
 .env.dev
 .env.prod
+.env.development
+.env.production
+.env.test
+*.env
+
+# API Keys and Secrets - NEVER COMMIT THESE
+*.key
+*.pem
+*.p12
+*.secret
+secrets/
+keys/
+
+# Logs
+logs/
+*.log
+.pm2/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+*.lcov
+
+# Cache
+.cache/
+.npm/
+
+# Build outputs
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

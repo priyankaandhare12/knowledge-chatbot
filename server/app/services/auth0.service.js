@@ -43,6 +43,10 @@ class Auth0Service {
             return tokenResponse.data;
         } catch (error) {
             console.error('Token exchange error:', error);
+            // Preserve custom errors
+            if (error.code || error.name !== 'Error') {
+                throw error;
+            }
             throw new Error('Failed to exchange authorization code for tokens');
         }
     }

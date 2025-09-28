@@ -33,13 +33,16 @@ describe('Web Search Tool', () => {
     beforeEach(async () => {
         // Reset mocks
         jest.clearAllMocks();
-        
+
         // Setup TavilySearch mock
-        const { TavilySearch } = await import('@langchain/tavily');
-        mockTavilySearch = TavilySearch;
         mockInvoke = jest.fn();
-        mockTavilySearch.mockImplementation(() => ({
+        mockTavilySearch = jest.fn().mockImplementation(() => ({
             invoke: mockInvoke,
+        }));
+
+        // Mock the import
+        jest.doMock('@langchain/tavily', () => ({
+            TavilySearch: mockTavilySearch,
         }));
     });
 

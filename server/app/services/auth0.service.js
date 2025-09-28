@@ -87,12 +87,9 @@ class Auth0Service {
     generateLogoutUrl(returnTo) {
         const baseUrl = `https://${config.auth0.domain}/v2/logout`;
 
-        // For now, don't include returnTo to avoid Auth0 configuration issues
-        // Once http://localhost:3000 is added to "Allowed Logout URLs" in Auth0 dashboard,
-        // you can uncomment the returnTo parameter
         const params = new URLSearchParams({
             client_id: config.auth0.clientId,
-            // returnTo: returnTo, // Commented out until configured in Auth0
+            returnTo: returnTo || config.frontend.url, // Include returnTo for proper redirect
         });
 
         return `${baseUrl}?${params.toString()}`;

@@ -119,7 +119,7 @@ router.get('/callback', async (req, res) => {
 // POST /auth/logout - Logout user
 router.post('/logout', (req, res) => {
     try {
-        const returnTo = req.body.returnTo || config.frontend.url;
+        const returnTo = req.body.returnTo || `${config.frontend.url}/logout`;
 
         // Clear session
         req.session.destroy((err) => {
@@ -128,12 +128,22 @@ router.post('/logout', (req, res) => {
             }
         });
 
-        // Clear JWT cookie
-        res.clearCookie('auth_token', {
+        // Clear all auth-related cookies more thoroughly
+        const cookieOptions = {
             domain: config.session.cookieDomain,
-        });
+            path: '/',
+            httpOnly: true,
+            secure: config.session.secure,
+        };
 
-        // Generate Auth0 logout URL
+        res.clearCookie('auth_token', cookieOptions);
+        res.clearCookie('connect.sid', cookieOptions); // Clear session cookie
+
+        // Also clear without domain to ensure cleanup
+        res.clearCookie('auth_token', { path: '/' });
+        res.clearCookie('connect.sid', { path: '/' });
+
+        // Generate Auth0 logout URL with proper returnTo
         const logoutUrl = auth0Service.generateLogoutUrl(returnTo);
 
         res.json({

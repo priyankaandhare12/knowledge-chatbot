@@ -196,15 +196,15 @@ router.get('/user', (req, res) => {
                     authenticated: true,
                 });
             } catch (jwtError) {
-                console.log('❌ JWT verification failed:', jwtError.message);
+                // console.log('❌ JWT verification failed:', jwtError.message);
                 // Invalid JWT, clear cookie
                 res.clearCookie('auth_token');
             }
         } else {
-            console.log('❌ No auth_token cookie found');
+            // console.log('❌ No auth_token cookie found');
         }
 
-        console.log('❌ No authentication found, returning null user');
+        // console.log('❌ No authentication found, returning null user');
         res.json({
             success: true,
             user: null,

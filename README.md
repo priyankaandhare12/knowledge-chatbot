@@ -10,6 +10,24 @@ A powerful chatbot that can answer questions by searching and synthesizing infor
 - 📝 Clear Responses: Well-formatted answers with sources
 - 🚀 Extensible: Ready for future knowledge sources
 
+
+Universal Knowledge Chatbot – Tech Stack & Tools
+Workflow & Integrations
+N8n – Orchestrated automation workflows, integrated Slack for team communication and Jira for issue tracking.
+Development & Automation
+Cursor + GitHub Copilot – Used for AI-assisted coding, debugging, and automating development tasks.
+Design
+Canva – Designed chatbot branding assets including the logo.
+Core Tools & Infrastructure
+Pinecone – Managed vector database for semantic search and knowledge retrieval.
+LangSmith – Tracing, debugging, and evaluating LLM applications.
+Auth0 – Authentication and secure user access management.
+Google Cloud Console – Infrastructure management, hosting, and monitoring.
+Lovable (Tool) – Used to generate boilerplate code and kickstart project setup.
+Playwright(ts) - To automate the application
+
+
+
 ## 🛠️ Tech Stack
 
 - **Framework**: Express.js

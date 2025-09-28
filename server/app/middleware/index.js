@@ -13,10 +13,10 @@ export const setupMiddleware = (app) => {
     app.use(helmet());
     app.use(
         cors({
-            origin: config.frontend.url,
+            origin: ['https://priyanka-andhare.app.n8n.cloud', config.frontend.url],
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Impersonation-Token', 'X-Impersonation-Email'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Impersonation-Token', 'X-Impersonation-Email', 'X-API-Key'],
         }),
     );
 

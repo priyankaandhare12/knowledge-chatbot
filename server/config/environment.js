@@ -86,6 +86,9 @@ export const config = {
         // clientSecret: process.env.SSO_CLIENT_SECRET,
         // callbackUrl: process.env.SSO_CALLBACK_URL,
     },
+
+    // n8n integration
+    n8nApiKey: process.env.N8N_API_KEY,
 };
 
 export const validateEnvironment = () => {

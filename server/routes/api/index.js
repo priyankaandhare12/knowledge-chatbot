@@ -10,6 +10,8 @@ import { asyncHandler } from '../../app/middleware/validation.js';
 import { chatValidation } from '../../app/validators/chat-validation.js';
 import { config } from '../../config/environment.js';
 import authRoutes from './auth.js';
+import { handleWebhookMessage } from '../../app/controllers/webhook-controller.js';
+import { validateApiKey } from '../../app/middleware/api-key-auth.js';
 
 const router = express.Router();
 
@@ -30,6 +32,9 @@ router.get(
 
 // Authentication routes (public)
 router.use('/auth', authRoutes);
+
+// webhook endpoint (protected by API key)
+router.post('/external/webhook', validateApiKey, handleWebhookMessage);
 
 // Protected routes - require authentication
 router.use(requireAuth);

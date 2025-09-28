@@ -34,7 +34,7 @@ const stateSchema = Annotation.Root({
 function initializeLLM() {
     if (!llm) {
         llm = new ChatOpenAI({
-            model: 'gpt-4',
+            model: 'gpt-4.1-mini',
             temperature: 0.1,
             apiKey: config.openai.apiKey,
             maxTokens: 1000,

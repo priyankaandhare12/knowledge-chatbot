@@ -33,6 +33,9 @@ process.on('SIGTERM', () => {
 
 const app = express();
 
+// Trust proxy (needed for rate limiting behind ngrok/proxy)
+app.set('trust proxy', 1);
+
 try {
     validateEnvironment();
 } catch (error) {

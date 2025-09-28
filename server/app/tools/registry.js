@@ -1,12 +1,14 @@
 import { documentQATool } from './document-qa/DocumentQATool.js';
 import { weatherTool } from './weather/WeatherTool.js';
 import slackSearchTool from './slack/SlackSearchTool.js';
+import jiraSearchTool from './jira/JiraSearchTool.js';
 
 // Add all tools here
 export const tools = [
     documentQATool,
     weatherTool,
     slackSearchTool,
+    jiraSearchTool,
 ];
 
 // Helper to get tool by name
@@ -19,4 +21,5 @@ export const TOOL_NAMES = {
     DOCUMENT_QA: 'documentQA',
     WEATHER: 'weatherLookup',
     SLACK_SEARCH: 'slack_search',
+    JIRA_SEARCH: 'jira_search',
 };

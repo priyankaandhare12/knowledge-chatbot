@@ -1,13 +1,13 @@
 import { asyncHandler } from '../middleware/validation.js';
 import logger from '../utils/logger.js';
-import { storeSlackMessage } from '../services/slack-vector.service.js';
+import { storeMessage } from '../services/vector-storage.service.js';
 
 /**
  * Handle incoming webhook messages
  */
 export const handleWebhookMessage = asyncHandler(async (req, res) => {
     try {
-        const { Data } = req.body;
+        const { Data, Source } = req.body;
 
         // Debug log the entire request body
         logger.info('Received webhook request:', {
@@ -16,41 +16,59 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
         });
 
         // Validate required fields
-        if (!Data || !Data.text) {
+        if (!Data) {
             logger.warn('Missing required fields:', {
                 received: Data
             });
             return res.status(400).json({
                 success: false,
-                error: 'Required fields missing',
-                details: {
-                    required: ['text'],
-                    received: Data ? Object.keys(Data) : 'no Data object'
-                }
+                error: 'Data missing',
             });
         }
 
         // Store message in vector DB
-        try {
-            const result = await storeSlackMessage({
+        if (Source && Source.toLowerCase() === 'slack') {
+            const result = await storeMessage({
                 text: Data.text,
-                user: Data.user || 'anonymous',
-                timestamp: Date.now().toString()
+                source: 'slack',
+                channel: 'knowledge-chatbot',
+                metadata: {
+                    user: Data.user || 'anonymous',
+                    timestamp: Date.now().toString(),
+                    source: Source,
+                    text: Data.text
+                }
             });
-
-            logger.info('Successfully processed webhook message', result);
-
+            logger.info('Successfully processed Slack webhook message', result);
             return res.json({
                 success: true,
                 data: result
             });
-        } catch (storeError) {
-            logger.error('Error in storeSlackMessage:', {
-                error: storeError.message,
-                stack: storeError.stack,
-                data: Data
+        } else if (Source && Source.toLowerCase() === 'jira') {
+            const inputText = Object.values(Data).join(' ');
+            const result = await storeMessage({
+                text: inputText,
+                source: 'Jira',
+                channel: Data['Project Name'],
+                metadata: {
+                    timestamp: Data['Created At'],
+                    user: Data['Creator'],
+                    source: Source,
+                    ...Data
+                }
             });
-            throw storeError;
+            logger.info('Successfully processed Jira webhook message', result);
+            return res.json({
+                success: true,
+                data: result
+            });
+        } else {
+            logger.warn('Unknown webhook source:', Source);
+            return res.status(400).json({
+                success: false,
+                error: 'Unknown webhook source',
+                source: Source
+            });
         }
 
     } catch (error) {

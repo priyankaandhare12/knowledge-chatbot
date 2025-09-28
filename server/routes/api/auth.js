@@ -153,14 +153,14 @@ router.post('/logout', (req, res) => {
 // GET /auth/user - Get current user info
 router.get('/user', (req, res) => {
     try {
-        console.log('=== /auth/user DEBUG ===');
-        console.log('Session exists:', !!req.session);
-        console.log('Session user:', req.session?.user);
-        console.log('All cookies:', req.cookies);
-        console.log('Auth token cookie:', req.cookies.auth_token);
-        console.log('Request origin:', req.get('origin'));
-        console.log('Cookie domain config:', config.session.cookieDomain);
-        console.log('=======================');
+        // console.log('=== /auth/user DEBUG ===');
+        // console.log('Session exists:', !!req.session);
+        // console.log('Session user:', req.session?.user);
+        // console.log('All cookies:', req.cookies);
+        // console.log('Auth token cookie:', req.cookies.auth_token);
+        // console.log('Request origin:', req.get('origin'));
+        // console.log('Cookie domain config:', config.session.cookieDomain);
+        // console.log('=======================');
 
         // Check session first
         if (req.session && req.session.user) {

@@ -22,6 +22,9 @@ const WEATHER_KEYWORDS = [
  * @returns {boolean} True if query is weather-related
  */
 const isWeatherQuery = (query) => {
+    if (!query || typeof query !== 'string') {
+        return false;
+    }
     const lowerQuery = query.toLowerCase();
     return WEATHER_KEYWORDS.some(keyword => lowerQuery.includes(keyword));
 };

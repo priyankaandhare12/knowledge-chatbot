@@ -3,6 +3,11 @@ import createError from 'http-errors';
 import logger from '../utils/logger.js';
 
 export const errorHandler = (err, req, res, next) => {
+    // Handle null or undefined errors
+    if (!err) {
+        err = new Error('Unknown error occurred');
+    }
+
     logger.error(err, 'Error:');
 
     if (err.status) {

@@ -2,7 +2,17 @@ import { Annotation, END, messagesStateReducer, START, StateGraph } from '@langc
 import logger from '../utils/logger.js';
 import { routerNode } from './nodes/router-node.js';
 import { weatherNode } from './nodes/weather-node.js';
-import { documentNode } from './nodes/document-node.js';
+
+// Simple stub for document node since it doesn't exist
+const documentNode = async (state) => {
+    return {
+        messages: [{
+            type: 'system',
+            content: 'Document processing is not available',
+        }],
+    };
+};
+
 
 // Define state schema
 const WorkflowState = Annotation.Root({
@@ -62,10 +72,12 @@ const graph = new StateGraph(WorkflowState)
 graph
     .addEdge(START, 'router')
     .addConditionalEdges('router', routeToNode, {
-        weatherNode: END,
-        documentNode: END,
+        weatherNode: 'weatherNode',
+        documentNode: 'documentNode',
         none: END,
-    });
+    })
+    .addEdge('weatherNode', END)
+    .addEdge('documentNode', END);
 
 // Compile the workflow
 const compiledWorkflow = graph.compile();

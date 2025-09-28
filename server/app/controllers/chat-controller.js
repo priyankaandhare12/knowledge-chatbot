@@ -7,10 +7,18 @@ import logger from '../utils/logger.js';
  * Main chat endpoint that handles both web search and document queries
  */
 export const chat = asyncHandler(async (req, res) => {
+    // Handle missing or null req.body
+    if (!req.body) {
+        return res.status(400).json({
+            success: false,
+            error: 'Request body is required',
+        });
+    }
+
     const { message, conversationId, fileId } = req.body;
 
     // Validate required fields
-    if (!message) {
+    if (!message || typeof message !== 'string' || message.trim() === '') {
         return res.status(400).json({
             success: false,
             error: 'Message is required',
@@ -22,11 +30,7 @@ export const chat = asyncHandler(async (req, res) => {
         const chatConversationId = conversationId || uuidv4();
 
         // Log the query type
-        logger.info(
-            fileId 
-                ? `Processing document query for fileId: ${fileId}` 
-                : 'Processing web search query'
-        );
+        logger.info(fileId ? `Processing document query for fileId: ${fileId}` : 'Processing web search query');
 
         // Invoke the universal agent
         const result = await invokeAgent({
@@ -54,7 +58,7 @@ export const chat = asyncHandler(async (req, res) => {
         // Add tool usage information if available
         const lastMessage = result.messages[result.messages.length - 1];
         if (lastMessage?.tool_calls?.length) {
-            response.data.toolsUsed = lastMessage.tool_calls.map(tool => tool.name);
+            response.data.toolsUsed = lastMessage.tool_calls.map((tool) => tool.name);
         }
 
         res.json(response);

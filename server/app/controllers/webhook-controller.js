@@ -26,6 +26,7 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
             });
         }
 
+
         // Store message in vector DB
         if (Source && Source.toLowerCase() === 'slack') {
             const result = await storeMessage({
@@ -35,7 +36,7 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
                 metadata: {
                     user: Data.user || 'anonymous',
                     timestamp: Date.now().toString(),
-                    source: Source,
+                    source: 'slack',
                     text: Data.text
                 }
             });
@@ -45,6 +46,7 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
                 data: result
             });
         } else if (Source && Source.toLowerCase() === 'jira') {
+            // console.log("Jira webhook Data:", Data);
             const inputText = Object.values(Data).join(' ');
             const result = await storeMessage({
                 text: inputText,
@@ -62,6 +64,41 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
                 success: true,
                 data: result
             });
+        } else if (Source && Source.toLowerCase() === 'github') {
+            // New GitHub payload: Data.data = [ { user, commits: [ { message, date, repo } ] } ]
+            const userCommitGroups = Array.isArray(Data.data) ? Data.data : [];
+            const results = [];
+            for (const userCommits of userCommitGroups) {
+                const user = userCommits.user || 'unknown';
+                for (const commit of userCommits.commits || []) {
+                    const repoName = commit.repo || 'unknown-repo';
+                    const commitText = `${commit.message} by ${user} on ${commit.date || ''} in ${repoName}`;
+                    const metadata = {
+                        repo: repoName,
+                        message: commit.message,
+                        author: user,
+                        timestamp: commit.date || Date.now().toString(),
+                        source: Source,
+                    };
+                    try {
+                        const result = await storeMessage({
+                            text: commitText,
+                            source: Source,
+                            channel: repoName,
+                            metadata
+                        });
+                        results.push(result);
+                    } catch (err) {
+                        logger.error('Error storing GitHub commit:', err);
+                    }
+                }
+            }
+            logger.info('Processed GitHub webhook message', { stored: results.length });
+            return res.json({
+                success: true,
+                stored: results.length,
+                data: results
+            });
         } else {
             logger.warn('Unknown webhook source:', Source);
             return res.status(400).json({
@@ -72,6 +109,7 @@ export const handleWebhookMessage = asyncHandler(async (req, res) => {
         }
 
     } catch (error) {
+        // console.error('Error processing webhook:', error);
         logger.error('Error processing webhook:', {
             error: error.message,
             stack: error.stack,

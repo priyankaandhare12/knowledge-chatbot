@@ -29,12 +29,12 @@ const searchFunction = async ({ query }) => {
             vector: response.data[0].embedding,
             filter: {
                 source: { $eq: "slack" },
-                channel: { $eq: "knowledge-chatbot" }
+                // channel: { $eq: "knowledge-chatbot" }
             },
-            topK: 5,
+            topK: 15,
             includeMetadata: true
         });
-
+        // console.log("searchResponse", JSON.stringify(searchResponse));
         // No results found
         if (searchResponse.matches.length === 0) {
             return {
